@@ -6,7 +6,7 @@ import time
 import numpy as np
 
 # Set page config
-st.set_page_config(page_title="Movie Recommender", layout="wide")
+st.set_page_config(page_title="CineMatch", layout="wide")
 
 # Gradient background and stylish design
 st.markdown("""
@@ -42,6 +42,12 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+st.markdown("""
+    <div style="position: fixed; top: 10px; left: 20px; z-index: 1000;">
+        <span style='font-size: 24px; font-weight: bold; font-family: "Segoe UI", sans-serif; color: #880e4f;'>CineMatch</span>
+    </div>
+""", unsafe_allow_html=True)
+
 
 # Title
 st.markdown("<h1>🎬 Movie Recommender System</h1>", unsafe_allow_html=True)
