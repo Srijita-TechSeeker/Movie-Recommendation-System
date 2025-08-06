@@ -8,31 +8,37 @@ import numpy as np
 # Set page config
 st.set_page_config(page_title="Movie Recommender", layout="wide")
 
-# Custom CSS for gradient background and modern design
+# Gradient background and stylish design
 st.markdown("""
     <style>
-    body {
-        background: linear-gradient(to right, #e0f7fa, #ffffff);
-    }
-    .main {
-        background-color: transparent;
+    .stApp {
+        background: linear-gradient(to right, #fce4ec, #f8bbd0, #f48fb1);
+        background-attachment: fixed;
     }
     h1 {
         font-size: 3em;
-        color: #00796b;
+        color: #880e4f;
         text-align: center;
         padding: 10px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     .stButton>button {
-        background-color: #00796b;
+        background-color: #ec407a;
         color: white;
         padding: 10px 20px;
         border-radius: 8px;
         border: none;
+        font-size: 16px;
+        transition: 0.3s;
     }
     .stButton>button:hover {
-        background-color: #004d40;
-        transition: 0.3s;
+        background-color: #c2185b;
+        cursor: pointer;
+    }
+    .css-1cpxqw2 {
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 2rem;
+        border-radius: 15px;
     }
     </style>
 """, unsafe_allow_html=True)
