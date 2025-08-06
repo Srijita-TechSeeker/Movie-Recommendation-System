@@ -51,12 +51,17 @@ st.markdown("""
     .nav-link:hover {
         text-decoration: underline;
     }
+    .movie-meta {
+        font-size: 0.85rem;
+        color: #4a148c;
+        font-weight: 500;
+        text-align: center;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# ---------------------- Navbar with Clickable Links ----------------------
+# ---------------------- Navbar ----------------------
 selected_page = st.session_state.get("selected_page", "Home")
-
 navbar_html = f"""
 <div class="navbar">
     <div class="logo">🎬 CineMatch</div>
@@ -69,71 +74,84 @@ navbar_html = f"""
 """
 st.markdown(navbar_html, unsafe_allow_html=True)
 
-# ---------------------- URL Param Handling ----------------------
+# ---------------------- Handle Nav Selection ----------------------
 query_params = st.query_params
 if "page" in query_params:
     selected_page = query_params["page"]
     st.session_state.selected_page = selected_page
 
-# ---------------------- Movie Poster Fetching ----------------------
-def fetch_poster(movie_id):
+# ---------------------- Helper: Fetch Movie Poster & Meta ----------------------
+def fetch_movie_details(movie_id):
+    url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_KEY}&language=en-US"
     try:
-        url = f'https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_KEY}&language=en-US'
-        response = requests.get(url)
-        data = response.json()
-        return "https://image.tmdb.org/t/p/w500/" + data['poster_path']
+        res = requests.get(url).json()
+        poster = "https://image.tmdb.org/t/p/w500/" + res.get("poster_path", "")
+        rating = res.get("vote_average", "N/A")
+        year = res.get("release_date", "N/A")[:4]
+        genres = ", ".join([g["name"] for g in res.get("genres", [])])
+        return poster, rating, year, genres
     except:
-        return "https://via.placeholder.com/500x750.png?text=Image+Not+Available"
+        return "https://via.placeholder.com/500x750.png?text=Not+Available", "N/A", "N/A", "N/A"
 
-# ---------------------- Recommendation Logic ----------------------
+# ---------------------- Recommend Function ----------------------
 def recommend(movie):
-    movie_index = movies[movies['title'] == movie].index[0]
-    distances = similarity[movie_index]
+    idx = movies[movies['title'] == movie].index[0]
+    distances = similarity[idx]
     movie_list = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:6]
-    recommended_movies = []
-    recommended_posters = []
 
+    results = []
     for i in movie_list:
-        movie_id = movies.iloc[i[0]].movie_id
-        recommended_movies.append(movies.iloc[i[0]].title)
-        recommended_posters.append(fetch_poster(movie_id))
+        row = movies.iloc[i[0]]
+        poster, rating, year, genres = fetch_movie_details(row.movie_id)
+        results.append({
+            "title": row.title,
+            "poster": poster,
+            "rating": rating,
+            "year": year,
+            "genres": genres
+        })
         time.sleep(0.2)
-    return recommended_movies, recommended_posters
+    return results
 
-# ---------------------- Page Routing ----------------------
+# ---------------------- Page Logic ----------------------
 if selected_page == "Home":
     st.markdown("<h1>🎬 Welcome to CineMatch</h1>", unsafe_allow_html=True)
     selected_movie = st.selectbox("Choose a movie you like:", movies['title'].values)
+
     if st.button("🔍 Recommend"):
-        names, posters = recommend(selected_movie)
+        recs = recommend(selected_movie)
         st.markdown("### 🎯 Top 5 Recommendations")
         cols = st.columns(5)
-        for i in range(5):
-            with cols[i]:
-                st.image(posters[i])
-                st.caption(names[i])
+        for i, col in enumerate(cols):
+            with col:
+                st.image(recs[i]["poster"])
+                st.caption(f"**{recs[i]['title']}**")
+                st.markdown(
+                    f"<div class='movie-meta'>⭐ {recs[i]['rating']}<br>📅 {recs[i]['year']}<br>🎭 {recs[i]['genres']}</div>",
+                    unsafe_allow_html=True
+                )
 
 elif selected_page == "About":
     st.markdown("## 📖 About CineMatch")
     st.write("""
-    **CineMatch** is a content-based movie recommendation system that suggests films similar to your favorite ones.
+    **CineMatch** is a content-based movie recommendation system that helps you discover movies similar to ones you love.
 
-    ### 🔧 Technologies Used:
-    - Python, Streamlit
-    - Pandas, NumPy
-    - Scikit-learn for similarity
-    - TMDb API for posters
+    ### 🔧 Built With:
+    - Python & Streamlit
+    - Pandas & NumPy
+    - Scikit-learn for content similarity
+    - TMDb API for movie posters and metadata
 
-    It's fast, intuitive, and built for movie lovers.
+    Whether you're a casual viewer or movie buff, CineMatch helps you find your next favorite film 🎥
     """)
 
 elif selected_page == "Contact":
     st.markdown("## 📫 Contact Us")
     st.write("""
     **Developer:** Srijita  
-    📧 Email: your.email@example.com  
+    📧 Email: srijita@example.com  
     🌐 GitHub: [Srijita-TechSeeker](https://github.com/Srijita-TechSeeker)
 
-    Have feedback or want to contribute? Let’s connect!
+    Have feedback or suggestions? I'd love to hear from you!
     """)
 
