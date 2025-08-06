@@ -2,103 +2,138 @@ import streamlit as st
 import pickle
 import pandas as pd
 import requests
-import time
 import numpy as np
+import time
 
-# Set page config
-st.set_page_config(page_title="CineMatch", layout="wide")
+# ---------------------- Page Configuration ----------------------
+st.set_page_config(page_title="CineMatch - Movie Recommender", layout="wide")
 
-# Gradient background and stylish design
+# ---------------------- Load Data ----------------------
+movies_dict = pickle.load(open('movie_dict.pkl', 'rb'))
+movies = pd.DataFrame(movies_dict)
+similarity = np.load('similarity_compressed.npz')['similarity']
+
+API_KEY = 'a425ca4774e78c51c7af6657e42236d2'
+
+# ---------------------- CSS Styles ----------------------
 st.markdown("""
     <style>
     .stApp {
         background: linear-gradient(to right, #fce4ec, #f8bbd0, #f48fb1);
         background-attachment: fixed;
+        font-family: 'Segoe UI', sans-serif;
     }
-    h1 {
-        font-size: 3em;
+    .navbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: rgba(255, 255, 255, 0.4);
+        padding: 1rem 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    .logo {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #ad1457;
+    }
+    .nav-links {
+        display: flex;
+        gap: 2rem;
+    }
+    .nav-link {
         color: #880e4f;
-        text-align: center;
-        padding: 10px;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    .stButton>button {
-        background-color: #ec407a;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 8px;
-        border: none;
-        font-size: 16px;
-        transition: 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #c2185b;
+        font-weight: bold;
+        font-size: 1.1rem;
         cursor: pointer;
+        text-decoration: none;
     }
-    .css-1cpxqw2 {
-        background-color: rgba(255, 255, 255, 0.8);
-        padding: 2rem;
-        border-radius: 15px;
+    .nav-link:hover {
+        text-decoration: underline;
     }
     </style>
 """, unsafe_allow_html=True)
-st.markdown("""
-    <div style="position: fixed; top: 10px; left: 20px; z-index: 1000;">
-        <span style='font-size: 24px; font-weight: bold; font-family: "Segoe UI", sans-serif; color: #880e4f;'>CineMatch</span>
+
+# ---------------------- Navbar with Clickable Links ----------------------
+selected_page = st.session_state.get("selected_page", "Home")
+
+navbar_html = f"""
+<div class="navbar">
+    <div class="logo">🎬 CineMatch</div>
+    <div class="nav-links">
+        <a class="nav-link" href="?page=Home">Home</a>
+        <a class="nav-link" href="?page=About">About</a>
+        <a class="nav-link" href="?page=Contact">Contact</a>
     </div>
-""", unsafe_allow_html=True)
+</div>
+"""
+st.markdown(navbar_html, unsafe_allow_html=True)
 
+# ---------------------- URL Param Handling ----------------------
+query_params = st.query_params
+if "page" in query_params:
+    selected_page = query_params["page"]
+    st.session_state.selected_page = selected_page
 
-# Title
-st.markdown("<h1>🎬 Movie Recommender System</h1>", unsafe_allow_html=True)
-
-# Load data
-movies_dict = pickle.load(open('movie_dict.pkl', 'rb'))
-movies = pd.DataFrame(movies_dict)
-similarity = np.load('similarity_compressed.npz')['similarity']
-
-# TMDb API Key
-API_KEY = 'a425ca4774e78c51c7af6657e42236d2'
-
-
-# Fetch poster from TMDb
+# ---------------------- Movie Poster Fetching ----------------------
 def fetch_poster(movie_id):
     try:
         url = f'https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_KEY}&language=en-US'
         response = requests.get(url)
-        response.raise_for_status()
         data = response.json()
         return "https://image.tmdb.org/t/p/w500/" + data['poster_path']
-    except Exception:
+    except:
         return "https://via.placeholder.com/500x750.png?text=Image+Not+Available"
 
-
-# Recommend movies
+# ---------------------- Recommendation Logic ----------------------
 def recommend(movie):
     movie_index = movies[movies['title'] == movie].index[0]
     distances = similarity[movie_index]
-    movies_list = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:6]
-
+    movie_list = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:6]
     recommended_movies = []
     recommended_posters = []
-    for i in movies_list:
+
+    for i in movie_list:
         movie_id = movies.iloc[i[0]].movie_id
         recommended_movies.append(movies.iloc[i[0]].title)
         recommended_posters.append(fetch_poster(movie_id))
-        time.sleep(0.3)
+        time.sleep(0.2)
     return recommended_movies, recommended_posters
 
+# ---------------------- Page Routing ----------------------
+if selected_page == "Home":
+    st.markdown("<h1>🎬 Welcome to CineMatch</h1>", unsafe_allow_html=True)
+    selected_movie = st.selectbox("Choose a movie you like:", movies['title'].values)
+    if st.button("🔍 Recommend"):
+        names, posters = recommend(selected_movie)
+        st.markdown("### 🎯 Top 5 Recommendations")
+        cols = st.columns(5)
+        for i in range(5):
+            with cols[i]:
+                st.image(posters[i])
+                st.caption(names[i])
 
-# Movie selector
-selected_movie_name = st.selectbox("Choose a movie to get recommendations:", movies['title'].values)
+elif selected_page == "About":
+    st.markdown("## 📖 About CineMatch")
+    st.write("""
+    **CineMatch** is a content-based movie recommendation system that suggests films similar to your favorite ones.
 
-# Button to trigger recommendation
-if st.button('🎥 Recommend'):
-    names, posters = recommend(selected_movie_name)
+    ### 🔧 Technologies Used:
+    - Python, Streamlit
+    - Pandas, NumPy
+    - Scikit-learn for similarity
+    - TMDb API for posters
 
-    st.markdown("### 📌 Top 5 Recommendations", unsafe_allow_html=True)
-    cols = st.columns(5)
-    for i in range(5):
-        with cols[i]:
-            st.image(posters[i])
-            st.caption(names[i])
+    It's fast, intuitive, and built for movie lovers.
+    """)
+
+elif selected_page == "Contact":
+    st.markdown("## 📫 Contact Us")
+    st.write("""
+    **Developer:** Srijita  
+    📧 Email: your.email@example.com  
+    🌐 GitHub: [Srijita-TechSeeker](https://github.com/Srijita-TechSeeker)
+
+    Have feedback or want to contribute? Let’s connect!
+    """)
+
